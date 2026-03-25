@@ -1,488 +1,487 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AlloyDB · NL Query Interface</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@400;600;800&display=swap" rel="stylesheet" />
-  <style>
-    /* ── Reset & Base ────────────────────────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>AlloyDB · NL Query Interface</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@400;600;800&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#090c10;--surface:#0e1318;--border:#1e2a35;
+  --accent:#00e5ff;--accent2:#7b61ff;--green:#00ffa3;
+  --warn:#ff6b6b;--text:#c8d8e8;--muted:#4a6070;--card:#111820;
+  --mono:'IBM Plex Mono',monospace;--ui:'Syne',sans-serif;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--ui);font-size:15px;line-height:1.6}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:.4}
 
-    :root {
-      --bg:        #090c10;
-      --surface:   #0e1318;
-      --border:    #1e2a35;
-      --accent:    #00e5ff;
-      --accent2:   #7b61ff;
-      --green:     #00ffa3;
-      --warn:      #ff6b6b;
-      --text:      #c8d8e8;
-      --muted:     #4a6070;
-      --card:      #111820;
-      --font-mono: 'IBM Plex Mono', monospace;
-      --font-ui:   'Syne', sans-serif;
-    }
+.shell{position:relative;z-index:1;max-width:1020px;margin:0 auto;padding:2rem 1.5rem 4rem}
 
-    html, body {
-      height: 100%;
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--font-ui);
-      font-size: 15px;
-      line-height: 1.6;
-    }
+/* Header */
+header{display:flex;align-items:flex-start;gap:1.2rem;border-bottom:1px solid var(--border);padding-bottom:1.5rem;margin-bottom:2rem}
+.logo{width:48px;height:48px;flex-shrink:0;background:linear-gradient(135deg,var(--accent2),var(--accent));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px}
+header h1{font-size:1.55rem;font-weight:800;letter-spacing:-.02em;color:#fff}
+header h1 span{color:var(--accent)}
+header p{font-size:.82rem;color:var(--muted);margin-top:.2rem;font-family:var(--mono)}
+.status-pill{margin-left:auto;align-self:center;flex-shrink:0;background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.2);color:var(--accent);font-family:var(--mono);font-size:.7rem;padding:.3rem .8rem;border-radius:999px;letter-spacing:.08em;display:flex;align-items:center;gap:.4rem}
+.dot-live{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
 
-    /* ── Noise overlay ───────────────────────────────────────────────── */
-    body::before {
-      content: '';
-      position: fixed; inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-      pointer-events: none; z-index: 0; opacity: .4;
-    }
+/* Key input */
+.key-card{background:rgba(123,97,255,.07);border:1px dashed rgba(123,97,255,.4);border-radius:12px;padding:1rem 1.2rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap}
+.key-card label{font-size:.72rem;font-family:var(--mono);letter-spacing:.1em;color:var(--accent2);text-transform:uppercase;white-space:nowrap}
+.key-card input{flex:1;min-width:260px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:.85rem;padding:.55rem .9rem;outline:none;transition:border-color .2s}
+.key-card input:focus{border-color:var(--accent2)}
+.key-card input::placeholder{color:var(--muted)}
+.key-note{font-size:.72rem;color:var(--muted);font-family:var(--mono)}
+.key-ok{display:none;background:rgba(0,255,163,.1);border:1px solid rgba(0,255,163,.3);color:var(--green);font-size:.72rem;font-family:var(--mono);padding:.3rem .7rem;border-radius:6px;white-space:nowrap}
 
-    /* ── Layout ──────────────────────────────────────────────────────── */
-    .shell {
-      position: relative; z-index: 1;
-      max-width: 980px;
-      margin: 0 auto;
-      padding: 2rem 1.5rem 4rem;
-    }
+/* Query card */
+.query-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem}
+.query-card label{display:block;font-size:.72rem;font-family:var(--mono);letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin-bottom:.6rem}
+.input-row{display:flex;gap:.75rem}
+.input-row input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--mono);font-size:.92rem;padding:.75rem 1rem;outline:none;transition:border-color .2s,box-shadow .2s}
+.input-row input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,229,255,.12)}
+.input-row input::placeholder{color:var(--muted)}
+.btn-run{background:linear-gradient(135deg,var(--accent2),var(--accent));border:none;border-radius:10px;color:#000;font-family:var(--ui);font-weight:600;font-size:.88rem;padding:.75rem 1.4rem;cursor:pointer;white-space:nowrap;transition:opacity .15s,transform .1s}
+.btn-run:hover{opacity:.88}
+.btn-run:active{transform:scale(.97)}
+.btn-run:disabled{opacity:.35;cursor:not-allowed}
+.chips{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1rem}
+.chip{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.3rem .75rem;font-size:.75rem;font-family:var(--mono);color:var(--muted);cursor:pointer;transition:all .15s}
+.chip:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,229,255,.06)}
 
-    /* ── Header ──────────────────────────────────────────────────────── */
-    header {
-      display: flex; align-items: flex-start; gap: 1.2rem;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 1.5rem; margin-bottom: 2rem;
-    }
-    .logo-badge {
-      width: 48px; height: 48px; flex-shrink: 0;
-      background: linear-gradient(135deg, var(--accent2), var(--accent));
-      border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 22px;
-    }
-    header h1 {
-      font-size: 1.55rem; font-weight: 800; letter-spacing: -.02em;
-      color: #fff;
-    }
-    header h1 span { color: var(--accent); }
-    header p { font-size: .82rem; color: var(--muted); margin-top: .2rem; font-family: var(--font-mono); }
-    .pill {
-      margin-left: auto; align-self: center; flex-shrink: 0;
-      background: rgba(0,229,255,.08); border: 1px solid rgba(0,229,255,.2);
-      color: var(--accent); font-family: var(--font-mono); font-size: .7rem;
-      padding: .3rem .8rem; border-radius: 999px; letter-spacing: .08em;
-    }
+/* Tabs */
+.tabs{display:flex;gap:.5rem;margin-bottom:1.5rem}
+.tab{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.4rem 1rem;font-size:.78rem;font-family:var(--mono);color:var(--muted);cursor:pointer;transition:all .15s}
+.tab.active{background:rgba(0,229,255,.08);border-color:rgba(0,229,255,.3);color:var(--accent)}
 
-    /* ── Query card ──────────────────────────────────────────────────── */
-    .query-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 1.5rem;
-      margin-bottom: 1.5rem;
-    }
-    .query-card label {
-      display: block; font-size: .72rem; font-family: var(--font-mono);
-      letter-spacing: .12em; color: var(--muted); text-transform: uppercase;
-      margin-bottom: .6rem;
-    }
-    .input-row {
-      display: flex; gap: .75rem;
-    }
-    .input-row input {
-      flex: 1;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      color: var(--text);
-      font-family: var(--font-mono);
-      font-size: .92rem;
-      padding: .75rem 1rem;
-      outline: none;
-      transition: border-color .2s, box-shadow .2s;
-    }
-    .input-row input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(0,229,255,.12);
-    }
-    .input-row input::placeholder { color: var(--muted); }
-    .btn-run {
-      background: linear-gradient(135deg, var(--accent2), var(--accent));
-      border: none; border-radius: 10px;
-      color: #000; font-family: var(--font-ui); font-weight: 600;
-      font-size: .88rem; padding: .75rem 1.4rem;
-      cursor: pointer; white-space: nowrap;
-      transition: opacity .15s, transform .1s;
-    }
-    .btn-run:hover { opacity: .88; }
-    .btn-run:active { transform: scale(.97); }
-    .btn-run:disabled { opacity: .4; cursor: not-allowed; }
+/* Panels */
+.panel{display:none}
+.panel.active{display:block}
 
-    /* ── Chips ───────────────────────────────────────────────────────── */
-    .chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
-    .chip {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 8px; padding: .3rem .75rem;
-      font-size: .75rem; font-family: var(--font-mono); color: var(--muted);
-      cursor: pointer; transition: all .15s;
-    }
-    .chip:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,229,255,.06); }
+/* SQL panel */
+.sql-panel{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent2);border-radius:10px;padding:1rem 1.2rem;margin-bottom:1.2rem;font-family:var(--mono);font-size:.82rem;color:#b3d0ff}
+.sql-panel .lbl{font-size:.65rem;letter-spacing:.15em;color:var(--accent2);text-transform:uppercase;margin-bottom:.4rem}
+.sql-panel pre{white-space:pre-wrap;word-break:break-all}
 
-    /* ── SQL panel ───────────────────────────────────────────────────── */
-    .sql-panel {
-      display: none;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-left: 3px solid var(--accent2);
-      border-radius: 10px;
-      padding: 1rem 1.2rem;
-      margin-bottom: 1.5rem;
-      font-family: var(--font-mono);
-      font-size: .82rem;
-      color: #b3d0ff;
-      position: relative;
-    }
-    .sql-panel .label {
-      font-size: .65rem; letter-spacing: .15em; color: var(--accent2);
-      text-transform: uppercase; margin-bottom: .4rem;
-    }
-    .sql-panel pre { white-space: pre-wrap; word-break: break-all; }
+/* Summary */
+.summary-box{background:rgba(0,255,163,.05);border:1px solid rgba(0,255,163,.2);border-radius:10px;padding:.9rem 1.2rem;margin-bottom:1.2rem;font-size:.9rem;color:var(--green)}
+.summary-box .lbl{font-size:.65rem;font-family:var(--mono);letter-spacing:.15em;color:rgba(0,255,163,.5);text-transform:uppercase;margin-bottom:.35rem}
 
-    /* ── Summary ─────────────────────────────────────────────────────── */
-    .summary-box {
-      display: none;
-      background: rgba(0,255,163,.05);
-      border: 1px solid rgba(0,255,163,.2);
-      border-radius: 10px;
-      padding: .9rem 1.2rem;
-      margin-bottom: 1.5rem;
-      font-size: .9rem;
-      color: var(--green);
-    }
-    .summary-box .label {
-      font-size: .65rem; font-family: var(--font-mono); letter-spacing: .15em;
-      color: rgba(0,255,163,.5); text-transform: uppercase; margin-bottom: .35rem;
-    }
+/* Error */
+.error-box{background:rgba(255,107,107,.06);border:1px solid rgba(255,107,107,.25);border-radius:10px;padding:.9rem 1.2rem;margin-bottom:1.2rem;font-size:.88rem;color:var(--warn);font-family:var(--mono)}
 
-    /* ── Error box ───────────────────────────────────────────────────── */
-    .error-box {
-      display: none;
-      background: rgba(255,107,107,.06);
-      border: 1px solid rgba(255,107,107,.25);
-      border-radius: 10px;
-      padding: .9rem 1.2rem;
-      margin-bottom: 1.5rem;
-      font-size: .88rem;
-      color: var(--warn);
-      font-family: var(--font-mono);
-    }
+/* Step indicator */
+.steps{display:none;font-family:var(--mono);font-size:.78rem;color:var(--muted);margin-bottom:1rem;display:flex;gap:1.2rem;flex-wrap:wrap}
+.step{display:flex;align-items:center;gap:.4rem;transition:color .2s}
+.step.done{color:var(--green)}
+.step.active{color:var(--accent);animation:blink .8s ease-in-out infinite}
+.step.error{color:var(--warn)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+.step-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0}
 
-    /* ── Results table ───────────────────────────────────────────────── */
-    .results-section { display: none; }
-    .results-header {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: .8rem;
-    }
-    .results-header h2 { font-size: .9rem; font-weight: 600; color: #fff; }
-    .count-badge {
-      background: rgba(123,97,255,.15); border: 1px solid rgba(123,97,255,.3);
-      color: var(--accent2); font-family: var(--font-mono); font-size: .72rem;
-      padding: .2rem .65rem; border-radius: 999px;
-    }
-    .table-wrap {
-      overflow-x: auto;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-    }
-    table {
-      width: 100%; border-collapse: collapse;
-      font-size: .82rem; font-family: var(--font-mono);
-    }
-    thead th {
-      background: rgba(0,229,255,.05);
-      color: var(--accent);
-      font-size: .68rem; letter-spacing: .12em; text-transform: uppercase;
-      padding: .75rem 1rem; text-align: left;
-      border-bottom: 1px solid var(--border);
-      white-space: nowrap;
-    }
-    tbody tr { border-bottom: 1px solid rgba(30,42,53,.8); transition: background .12s; }
-    tbody tr:last-child { border-bottom: none; }
-    tbody tr:hover { background: rgba(0,229,255,.03); }
-    tbody td {
-      padding: .65rem 1rem; color: var(--text); vertical-align: top;
-      max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    }
-    tbody td.numeric { color: var(--green); }
-    tbody td.rating  { color: #ffd166; }
+/* Table */
+.results-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem}
+.results-header h2{font-size:.9rem;font-weight:600;color:#fff}
+.count-badge{background:rgba(123,97,255,.15);border:1px solid rgba(123,97,255,.3);color:var(--accent2);font-family:var(--mono);font-size:.72rem;padding:.2rem .65rem;border-radius:999px}
+.table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px}
+table{width:100%;border-collapse:collapse;font-size:.82rem;font-family:var(--mono)}
+thead th{background:rgba(0,229,255,.05);color:var(--accent);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;padding:.75rem 1rem;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+tbody tr{border-bottom:1px solid rgba(30,42,53,.8);transition:background .12s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:rgba(0,229,255,.03)}
+tbody td{padding:.65rem 1rem;color:var(--text);vertical-align:top;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+td.num{color:var(--green)}
+td.rate{color:#ffd166}
 
-    /* ── Loader ──────────────────────────────────────────────────────── */
-    .loader { display: none; text-align: center; padding: 2rem; }
-    .loader .dot {
-      display: inline-block; width: 8px; height: 8px;
-      background: var(--accent); border-radius: 50%;
-      margin: 0 4px;
-      animation: bounce 1.2s ease-in-out infinite;
-    }
-    .loader .dot:nth-child(2) { animation-delay: .2s; }
-    .loader .dot:nth-child(3) { animation-delay: .4s; }
-    @keyframes bounce {
-      0%, 80%, 100% { transform: translateY(0); opacity: .4; }
-      40%           { transform: translateY(-10px); opacity: 1; }
-    }
+/* Loader dots */
+.loader{text-align:center;padding:2rem;display:none}
+.loader .dot{display:inline-block;width:8px;height:8px;background:var(--accent);border-radius:50%;margin:0 4px;animation:bounce 1.2s ease-in-out infinite}
+.loader .dot:nth-child(2){animation-delay:.2s}
+.loader .dot:nth-child(3){animation-delay:.4s}
+@keyframes bounce{0%,80%,100%{transform:translateY(0);opacity:.4}40%{transform:translateY(-10px);opacity:1}}
 
-    /* ── Schema sidebar ──────────────────────────────────────────────── */
-    .schema-toggle {
-      font-size: .75rem; font-family: var(--font-mono); color: var(--muted);
-      background: none; border: 1px dashed var(--border);
-      border-radius: 8px; padding: .35rem .8rem;
-      cursor: pointer; transition: all .15s; margin-bottom: 1rem;
-      display: inline-flex; align-items: center; gap: .4rem;
-    }
-    .schema-toggle:hover { color: var(--text); border-color: var(--muted); }
-    .schema-box {
-      display: none;
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 10px; padding: 1rem 1.2rem;
-      font-family: var(--font-mono); font-size: .78rem;
-      color: #7090aa; margin-bottom: 1.5rem;
-      white-space: pre;
-    }
+/* Schema box */
+.schema-toggle{font-size:.75rem;font-family:var(--mono);color:var(--muted);background:none;border:1px dashed var(--border);border-radius:8px;padding:.35rem .8rem;cursor:pointer;transition:all .15s;margin-bottom:1rem;display:inline-flex;align-items:center;gap:.4rem}
+.schema-toggle:hover{color:var(--text);border-color:var(--muted)}
+.schema-box{display:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem 1.2rem;font-family:var(--mono);font-size:.78rem;color:#7090aa;margin-bottom:1.5rem;white-space:pre}
 
-    /* ── Footer ──────────────────────────────────────────────────────── */
-    footer {
-      margin-top: 3rem; border-top: 1px solid var(--border);
-      padding-top: 1rem; font-size: .72rem; color: var(--muted);
-      font-family: var(--font-mono); display: flex; gap: 2rem;
-    }
+/* Browse panel */
+.browse-hint{font-size:.78rem;color:var(--muted);font-family:var(--mono);margin-bottom:1rem}
 
-    /* ── Fade in animation ───────────────────────────────────────────── */
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(12px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .fade-in { animation: fadeUp .35s ease forwards; }
-  </style>
+footer{margin-top:3rem;border-top:1px solid var(--border);padding-top:1rem;font-size:.72rem;color:var(--muted);font-family:var(--mono);display:flex;gap:2rem;flex-wrap:wrap}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeUp .3s ease forwards}
+</style>
 </head>
 <body>
 <div class="shell">
 
-  <!-- Header -->
-  <header>
-    <div class="logo-badge">🗄</div>
-    <div>
-      <h1>AlloyDB <span>NL→SQL</span></h1>
-      <p>Natural language · PostgreSQL · Claude AI</p>
-    </div>
-    <span class="pill">LIVE</span>
-  </header>
+<!-- Header -->
+<header>
+  <div class="logo">🗄</div>
+  <div>
+    <h1>AlloyDB <span>NL→SQL</span></h1>
+    <p>Natural language · PostgreSQL · Claude AI</p>
+  </div>
+  <span class="status-pill"><span class="dot-live"></span>LIVE</span>
+</header>
 
-  <!-- Query input -->
+<!-- API Key input -->
+<div class="key-card" id="keyCard">
+  <label>Anthropic API Key</label>
+  <input id="apiKeyInput" type="password" placeholder="sk-ant-api03-..." autocomplete="off"/>
+  <span class="key-note">Used only in your browser · never sent to the server</span>
+  <span class="key-ok" id="keyOk">✓ Key saved</span>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <div class="tab active" onclick="showTab('query')">⚡ Query</div>
+  <div class="tab" onclick="showTab('browse')">📋 Browse All</div>
+</div>
+
+<!-- ══ QUERY PANEL ══ -->
+<div class="panel active" id="panel-query">
+
   <div class="query-card">
     <label>Ask a question about the product database</label>
     <div class="input-row">
-      <input id="question" type="text" placeholder="e.g. Show me electronics under $100 with rating above 4.5" autocomplete="off" />
+      <input id="question" type="text" placeholder="e.g. Show electronics under $100 with rating above 4.5" autocomplete="off"/>
       <button class="btn-run" id="runBtn" onclick="runQuery()">Run ▶</button>
     </div>
-    <div class="chips" id="exampleChips">
-      <span class="chip" onclick="fillExample(this)">Top 5 rated products</span>
-      <span class="chip" onclick="fillExample(this)">Electronics under $100</span>
-      <span class="chip" onclick="fillExample(this)">Low stock items (stock &lt; 20)</span>
-      <span class="chip" onclick="fillExample(this)">Best kitchen products by rating</span>
-      <span class="chip" onclick="fillExample(this)">Products priced between $30 and $80</span>
-      <span class="chip" onclick="fillExample(this)">Sports items sorted by price</span>
+    <div class="chips">
+      <span class="chip" onclick="fill(this)">Top 5 rated products</span>
+      <span class="chip" onclick="fill(this)">Electronics under $100</span>
+      <span class="chip" onclick="fill(this)">Low stock items under 20</span>
+      <span class="chip" onclick="fill(this)">Best kitchen products by rating</span>
+      <span class="chip" onclick="fill(this)">Products between $30 and $80</span>
+      <span class="chip" onclick="fill(this)">Sports items sorted by price</span>
+      <span class="chip" onclick="fill(this)">Most expensive product in each category</span>
+      <span class="chip" onclick="fill(this)">Products with rating above 4.7</span>
     </div>
   </div>
 
-  <!-- Schema toggle -->
-  <button class="schema-toggle" onclick="toggleSchema()">⬡ View table schema</button>
-  <pre class="schema-box" id="schemaBox">Loading schema…</pre>
-
-  <!-- Loader -->
-  <div class="loader" id="loader">
-    <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+  <!-- Step progress -->
+  <div class="steps" id="steps">
+    <span class="step" id="s1"><span class="step-dot"></span>Generating SQL</span>
+    <span class="step" id="s2"><span class="step-dot"></span>Querying AlloyDB</span>
+    <span class="step" id="s3"><span class="step-dot"></span>Summarising results</span>
   </div>
 
-  <!-- Error -->
-  <div class="error-box" id="errorBox"></div>
+  <div class="loader" id="loader"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+  <div class="error-box" id="errBox" style="display:none"></div>
 
-  <!-- Generated SQL -->
-  <div class="sql-panel" id="sqlPanel">
-    <div class="label">▸ Generated SQL</div>
-    <pre id="sqlText"></pre>
+  <div id="sqlPanelWrap" style="display:none">
+    <div class="sql-panel fade-in">
+      <div class="lbl">▸ Generated SQL</div>
+      <pre id="sqlText"></pre>
+    </div>
   </div>
 
-  <!-- AI Summary -->
-  <div class="summary-box" id="summaryBox">
-    <div class="label">✦ AI Summary</div>
-    <div id="summaryText"></div>
+  <div id="summaryWrap" style="display:none">
+    <div class="summary-box fade-in">
+      <div class="lbl">✦ AI Summary</div>
+      <div id="summaryText"></div>
+    </div>
   </div>
 
-  <!-- Results table -->
-  <div class="results-section" id="resultsSection">
+  <div id="resultsWrap" style="display:none">
     <div class="results-header">
       <h2>Query Results</h2>
       <span class="count-badge" id="countBadge">0 rows</span>
     </div>
     <div class="table-wrap">
-      <table id="resultsTable">
-        <thead id="tableHead"></thead>
-        <tbody id="tableBody"></tbody>
-      </table>
+      <table><thead id="qHead"></thead><tbody id="qBody"></tbody></table>
     </div>
   </div>
 
-  <footer>
-    <span>AlloyDB for PostgreSQL</span>
-    <span>Powered by Claude AI</span>
-    <span id="footerTs"></span>
-  </footer>
-</div>
+</div><!-- /panel-query -->
+
+<!-- ══ BROWSE PANEL ══ -->
+<div class="panel" id="panel-browse">
+  <p class="browse-hint">All products currently seeded in AlloyDB ↓</p>
+  <div class="loader" id="browseLoader"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+  <div id="browseWrap" style="display:none">
+    <div class="results-header">
+      <h2>Products table</h2>
+      <span class="count-badge" id="browseBadge">0 rows</span>
+    </div>
+    <div class="table-wrap">
+      <table><thead id="bHead"></thead><tbody id="bBody"></tbody></table>
+    </div>
+  </div>
+</div><!-- /panel-browse -->
+
+<button class="schema-toggle" onclick="toggleSchema()">⬡ View table schema</button>
+<pre class="schema-box" id="schemaBox">Loading…</pre>
+
+<footer>
+  <span>AlloyDB for PostgreSQL</span>
+  <span>Powered by Claude AI (client-side)</span>
+  <span id="ts"></span>
+</footer>
+</div><!-- /shell -->
 
 <script>
-  // ── Utilities ────────────────────────────────────────────────────────────
-  const $ = id => document.getElementById(id);
+// ═══════════════════════════════════════════════════════════════════════
+// State
+// ═══════════════════════════════════════════════════════════════════════
+let SYS_NL2SQL = "";
+let SYS_SUMM   = "";
 
-  function show(el)  { el.style.display = 'block'; }
-  function hide(el)  { el.style.display = 'none';  }
-  function fadeIn(el){ el.classList.remove('fade-in'); void el.offsetWidth; el.classList.add('fade-in'); }
+// ═══════════════════════════════════════════════════════════════════════
+// Init
+// ═══════════════════════════════════════════════════════════════════════
+(async () => {
+  // Restore key
+  const saved = sessionStorage.getItem("ant_key");
+  if (saved) { $("apiKeyInput").value = saved; showKeyOk(); }
 
-  // ── Schema loader ────────────────────────────────────────────────────────
-  async function loadSchema() {
-    try {
-      const r = await fetch('/schema');
-      const d = await r.json();
-      $('schemaBox').textContent = d.schema || 'Schema unavailable.';
-    } catch {
-      $('schemaBox').textContent = 'Could not load schema.';
-    }
-  }
-  loadSchema();
+  // Load prompts + schema from server
+  try {
+    const r = await fetch("/schema");
+    const d = await r.json();
+    $("schemaBox").textContent = d.schema || "Unavailable";
+    SYS_NL2SQL = d.system_prompt    || "";
+    SYS_SUMM   = d.summarise_prompt || "";
+  } catch { $("schemaBox").textContent = "Could not load schema."; }
 
-  function toggleSchema() {
-    const box = $('schemaBox');
-    if (box.style.display === 'block') {
-      hide(box);
-    } else {
-      show(box); fadeIn(box);
-    }
-  }
-
-  // ── Example chips ────────────────────────────────────────────────────────
-  function fillExample(el) {
-    $('question').value = el.textContent.replace(/&lt;/g, '<');
-    $('question').focus();
-  }
-
-  // ── Enter key shortcut ───────────────────────────────────────────────────
-  $('question').addEventListener('keydown', e => {
-    if (e.key === 'Enter') runQuery();
+  // Key save on input
+  $("apiKeyInput").addEventListener("input", () => {
+    const v = $("apiKeyInput").value.trim();
+    if (v) { sessionStorage.setItem("ant_key", v); showKeyOk(); }
   });
 
-  // ── Main query function ──────────────────────────────────────────────────
-  async function runQuery() {
-    const question = $('question').value.trim();
-    if (!question) return;
+  // Enter to run
+  $("question").addEventListener("keydown", e => e.key === "Enter" && runQuery());
+})();
 
-    // Reset UI
-    hide($('errorBox'));
-    hide($('sqlPanel'));
-    hide($('summaryBox'));
-    hide($('resultsSection'));
-    show($('loader'));
-    $('runBtn').disabled = true;
+// ═══════════════════════════════════════════════════════════════════════
+// Helpers
+// ═══════════════════════════════════════════════════════════════════════
+const $ = id => document.getElementById(id);
+const show = el => el.style.display = "block";
+const hide = el => el.style.display = "none";
+const esc  = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 
-    try {
-      const resp = await fetch('/query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question }),
-      });
-      const data = await resp.json();
-      hide($('loader'));
+function showKeyOk(){
+  $("keyOk").style.display = "inline-flex";
+  setTimeout(() => $("keyOk").style.display = "none", 2500);
+}
 
-      if (data.error) {
-        $('errorBox').textContent = '⚠ ' + data.error;
-        show($('errorBox')); fadeIn($('errorBox'));
-        return;
-      }
+function fill(el){
+  $("question").value = el.textContent;
+  $("question").focus();
+}
 
-      // SQL panel
-      if (data.sql) {
-        $('sqlText').textContent = formatSQL(data.sql);
-        show($('sqlPanel')); fadeIn($('sqlPanel'));
-      }
+function showTab(name){
+  document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  $("panel-"+name).classList.add("active");
+  event.target.classList.add("active");
+  if (name === "browse") loadBrowse();
+}
 
-      // Summary
-      if (data.summary) {
-        $('summaryText').textContent = data.summary;
-        show($('summaryBox')); fadeIn($('summaryBox'));
-      }
+function toggleSchema(){
+  const b = $("schemaBox");
+  b.style.display = b.style.display === "block" ? "none" : "block";
+}
 
-      // Table
-      renderTable(data.columns, data.rows, data.count);
+function setStep(id, state){
+  // state: idle | active | done | error
+  const el = $(id);
+  if (!el) return;
+  el.className = "step " + (state === "idle" ? "" : state);
+}
 
-    } catch (err) {
-      hide($('loader'));
-      $('errorBox').textContent = '⚠ Network error: ' + err.message;
-      show($('errorBox')); fadeIn($('errorBox'));
-    } finally {
-      $('runBtn').disabled = false;
-      $('footerTs').textContent = 'Last query: ' + new Date().toLocaleTimeString();
-    }
+function resetSteps(){
+  ["s1","s2","s3"].forEach(s => setStep(s, "idle"));
+  hide($("steps"));
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Call Anthropic API from the browser
+// ═══════════════════════════════════════════════════════════════════════
+async function callClaude(systemPrompt, userMessage, maxTokens=600){
+  const key = ($("apiKeyInput").value || "").trim();
+  if (!key) throw new Error("Please enter your Anthropic API key above.");
+
+  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type":         "application/json",
+      "x-api-key":            key,
+      "anthropic-version":    "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true",
+    },
+    body: JSON.stringify({
+      model:      "claude-sonnet-4-20250514",
+      max_tokens: maxTokens,
+      system:     systemPrompt,
+      messages:   [{ role: "user", content: userMessage }],
+    }),
+  });
+
+  const data = await resp.json();
+
+  // Auth error → friendly message
+  if (data.error) {
+    const msg = data.error.message || JSON.stringify(data.error);
+    if (resp.status === 401)
+      throw new Error("Invalid API key. Check your key and try again.");
+    throw new Error("Claude API error: " + msg);
   }
 
-  // ── Table renderer ───────────────────────────────────────────────────────
-  function renderTable(columns, rows, count) {
-    if (!rows || rows.length === 0) {
-      $('countBadge').textContent = '0 rows';
-      $('tableHead').innerHTML = '';
-      $('tableBody').innerHTML = '<tr><td colspan="99" style="text-align:center;padding:2rem;color:var(--muted)">No results found.</td></tr>';
-      show($('resultsSection')); fadeIn($('resultsSection'));
-      return;
+  return data.content.map(b => b.text || "").join("").trim();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Main query pipeline
+// ═══════════════════════════════════════════════════════════════════════
+async function runQuery(){
+  const question = $("question").value.trim();
+  if (!question) return;
+
+  // Reset UI
+  hide($("errBox"));
+  hide($("sqlPanelWrap"));
+  hide($("summaryWrap"));
+  hide($("resultsWrap"));
+  show($("loader"));
+  show($("steps"));
+  resetSteps();
+  $("runBtn").disabled = true;
+
+  try {
+    // ── Step 1: NL → SQL ─────────────────────────────────────────────
+    setStep("s1", "active");
+    const rawSQL = await callClaude(SYS_NL2SQL, question, 400);
+
+    if (rawSQL.startsWith("CANNOT_ANSWER")) {
+      throw new Error(
+        "Your question could not be mapped to the available data. " +
+        "Try asking about products, prices, categories, stock, or ratings."
+      );
     }
 
-    $('countBadge').textContent = count + ' row' + (count !== 1 ? 's' : '');
+    // Strip any accidental fences
+    const sql = rawSQL
+      .replace(/^```(?:sql)?/im,"").replace(/```$/m,"").trim()
+      .replace(/;$/,"");
 
-    // Header
-    $('tableHead').innerHTML = '<tr>' + columns.map(c =>
-      `<th>${escHtml(c)}</th>`
-    ).join('') + '</tr>';
+    $("sqlText").textContent = formatSQL(sql);
+    show($("sqlPanelWrap"));
+    setStep("s1", "done");
 
-    // Body
-    const numCols   = new Set(['price', 'stock']);
-    const rateCols  = new Set(['rating']);
-    $('tableBody').innerHTML = rows.map(row => {
-      return '<tr>' + columns.map(col => {
-        const val = row[col];
-        const cls = rateCols.has(col) ? ' class="rating"'
-                  : numCols.has(col)  ? ' class="numeric"' : '';
-        const display = val === null || val === undefined ? '<span style="color:var(--muted)">—</span>' : escHtml(String(val));
-        return `<td${cls} title="${escHtml(String(val ?? ''))}">${display}</td>`;
-      }).join('') + '</tr>';
-    }).join('');
-
-    show($('resultsSection')); fadeIn($('resultsSection'));
-  }
-
-  // ── SQL formatter (basic keyword capitalisation + newlines) ──────────────
-  function formatSQL(sql) {
-    const kw = ['SELECT', 'FROM', 'WHERE', 'AND', 'OR', 'ORDER BY',
-                'GROUP BY', 'HAVING', 'LIMIT', 'JOIN', 'LEFT JOIN',
-                'INNER JOIN', 'ON', 'AS'];
-    let out = sql;
-    kw.forEach(k => {
-      out = out.replace(new RegExp('\\b' + k + '\\b', 'gi'), '\n' + k);
+    // ── Step 2: Execute SQL on AlloyDB ───────────────────────────────
+    setStep("s2", "active");
+    const exResp = await fetch("/execute", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ sql }),
     });
-    return out.trim();
-  }
+    const exData = await exResp.json();
+    if (exData.error) throw new Error("Database error: " + exData.error);
+    setStep("s2", "done");
 
-  function escHtml(s) {
-    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    renderTable(exData.columns, exData.rows, exData.count, "qHead", "qBody");
+    $("countBadge").textContent = exData.count + " row" + (exData.count !== 1 ? "s" : "");
+    show($("resultsWrap"));
+
+    // ── Step 3: Summarise ────────────────────────────────────────────
+    setStep("s3", "active");
+    const sample = exData.rows.slice(0,12);
+    const summMsg = (
+      `Question: ${question}\n\n` +
+      `Total rows returned: ${exData.count}\n` +
+      `Data sample:\n${JSON.stringify(sample, null, 2)}`
+    );
+    const summary = await callClaude(SYS_SUMM, summMsg, 300);
+    $("summaryText").textContent = summary;
+    show($("summaryWrap"));
+    setStep("s3", "done");
+
+    $("ts").textContent = "Last query: " + new Date().toLocaleTimeString();
+
+  } catch (err) {
+    hide($("loader"));
+    const step = ["s1","s2","s3"].find(s => $(s).classList.contains("active"));
+    if (step) setStep(step, "error");
+    $("errBox").innerHTML = "⚠ " + esc(err.message);
+    show($("errBox"));
+  } finally {
+    hide($("loader"));
+    $("runBtn").disabled = false;
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Browse all rows
+// ═══════════════════════════════════════════════════════════════════════
+let browseLoaded = false;
+async function loadBrowse(){
+  if (browseLoaded) return;
+  show($("browseLoader"));
+  try {
+    const r = await fetch("/all");
+    const d = await r.json();
+    hide($("browseLoader"));
+    renderTable(d.columns, d.rows, d.count, "bHead", "bBody");
+    $("browseBadge").textContent = d.count + " rows";
+    show($("browseWrap"));
+    browseLoaded = true;
+  } catch {
+    hide($("browseLoader"));
+    $("browseWrap").innerHTML = "<p style='color:var(--warn);font-family:var(--mono);font-size:.82rem'>Could not load rows — is AlloyDB connected?</p>";
+    show($("browseWrap"));
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Table renderer
+// ═══════════════════════════════════════════════════════════════════════
+const NUM_COLS  = new Set(["price","stock","id"]);
+const RATE_COLS = new Set(["rating"]);
+
+function renderTable(columns, rows, count, headId, bodyId){
+  if (!rows || rows.length === 0){
+    $(bodyId).innerHTML = `<tr><td colspan="99" style="text-align:center;padding:2rem;color:var(--muted)">No results found.</td></tr>`;
+    $(headId).innerHTML = columns.length
+      ? "<tr>" + columns.map(c=>`<th>${esc(c)}</th>`).join("") + "</tr>"
+      : "";
+    return;
+  }
+  $(headId).innerHTML = "<tr>" + columns.map(c=>`<th>${esc(c)}</th>`).join("") + "</tr>";
+  $(bodyId).innerHTML = rows.map(row =>
+    "<tr>" + columns.map(col => {
+      const v = row[col];
+      const cls = RATE_COLS.has(col) ? " class='rate'"
+                : NUM_COLS.has(col)  ? " class='num'" : "";
+      const display = (v === null || v === undefined)
+        ? "<span style='color:var(--muted)'>—</span>"
+        : esc(String(v));
+      return `<td${cls} title="${esc(String(v??''))}">${display}</td>`;
+    }).join("") + "</tr>"
+  ).join("");
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// SQL formatter
+// ═══════════════════════════════════════════════════════════════════════
+function formatSQL(sql){
+  const kw = ["SELECT","FROM","WHERE","AND","OR","ORDER BY","GROUP BY",
+              "HAVING","LIMIT","JOIN","LEFT JOIN","INNER JOIN","ON","AS",
+              "ILIKE","LIKE","IN","NOT IN","BETWEEN","IS NULL","IS NOT NULL"];
+  let out = sql;
+  kw.forEach(k => {
+    out = out.replace(new RegExp("\\b"+k+"\\b","gi"), "\n"+k);
+  });
+  return out.trim();
+}
 </script>
 </body>
 </html>

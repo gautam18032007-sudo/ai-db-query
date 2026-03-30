@@ -18,8 +18,8 @@ AI flow (all in the browser):
 """
 
 from flask import Flask, render_template, request, jsonify
-from db import init_db, execute_query, get_schema_text, get_all_rows
-from ai import validate_sql
+from db import init_db, execute_query, get_schema, get_all_rows
+from ai import validate_sql, get_nl2sql_system_prompt, get_summarise_system_prompt
 
 app = Flask(__name__)
 _db_ready = False
@@ -69,11 +69,11 @@ def execute():
 
 @app.route("/schema")
 def schema():
-    """Return schema text for the frontend."""
+    """Return schema text + AI system prompts for the frontend."""
     return jsonify({
-        "schema": get_schema_text(),
-    "system_prompt": "System prompt generated client-side",
-        "summarise_prompt": "Summarise prompt generated client-side",
+        "schema":           get_schema(),
+        "system_prompt":    get_nl2sql_system_prompt(),
+        "summarise_prompt": get_summarise_system_prompt(),
     })
 
 

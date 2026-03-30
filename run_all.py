@@ -48,7 +48,7 @@ def main():
     
     print("\n✅ All files have valid syntax!")
     print("\n🚀 Starting Flask application...")
-    print("   The app will be available at: http://localhost:5000")
+    print("   The app will be available at: http://localhost:5001")
     print("   Press Ctrl+C to stop the server\n")
     
     # Run the Flask app

@@ -1,29 +1,36 @@
 """
-db.py  –  AlloyDB / PostgreSQL database layer
+db.py — AlloyDB (PostgreSQL) database layer
 
-Responsibilities:
-  - Manage a psycopg2 connection pool to AlloyDB.
-  - Seed a sample `products` dataset on first run.
-  - Execute SELECT statements and return structured JSON-serialisable results.
-  - Expose the table schema as a plain-text string for the AI prompt.
+- Connection pooling via psycopg2.pool
+- Auto-creates and seeds the products table on first run
+- Executes SELECT queries and returns JSON-safe results
+- Exposes schema metadata for the AI prompt
 """
 
+import logging
+from decimal import Decimal
 import psycopg2
+import psycopg2.pool
 from psycopg2.extras import RealDictCursor
-from psycopg2 import pool as pg_pool
 from config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, TABLE_NAME
 
-_pool = None
+log = logging.getLogger(__name__)
+
+_pool: psycopg2.pool.SimpleConnectionPool | None = None
 
 
-def get_pool():
+# ── Pool management ────────────────────────────────────────────────────────
+
+def get_pool() -> psycopg2.pool.SimpleConnectionPool:
     global _pool
     if _pool is None:
-        _pool = pg_pool.SimpleConnectionPool(
-            minconn=1, maxconn=5,
+        _pool = psycopg2.pool.SimpleConnectionPool(
+            minconn=1, maxconn=10,
             host=DB_HOST, port=DB_PORT,
             dbname=DB_NAME, user=DB_USER, password=DB_PASSWORD,
+            connect_timeout=10,
         )
+        log.info("AlloyDB connection pool created")
     return _pool
 
 
@@ -31,11 +38,56 @@ def get_conn():
     return get_pool().getconn()
 
 
-def release_conn(conn):
+def put_conn(conn):
     get_pool().putconn(conn)
 
 
-# ── Schema & seed data ────────────────────────────────────────────────────
+# ── Seed data (20 products across 5 categories) ────────────────────────────
+
+SEED_PRODUCTS = [
+    # (name, category, price, stock, rating, description)
+    ("Wireless Noise-Cancelling Headphones", "Electronics", 149.99, 35, 4.7,
+     "Over-ear ANC headphones with 30-hour battery and premium sound."),
+    ("Ergonomic Office Chair",               "Furniture",   329.00, 12, 4.5,
+     "Lumbar-support mesh chair for all-day comfort and posture."),
+    ("Stainless Steel Water Bottle",         "Kitchen",      24.95, 120, 4.8,
+     "32oz double-walled insulated bottle, cold 24h or hot 12h."),
+    ("Mechanical Keyboard TKL",              "Electronics",  89.99,  60, 4.6,
+     "Cherry MX Brown switches, RGB backlight, compact tenkeyless."),
+    ("Yoga Mat Premium",                     "Sports",       45.00,  80, 4.4,
+     "6mm non-slip TPE foam with alignment lines, eco-friendly."),
+    ("Air Purifier HEPA 500sqft",            "Home",        199.00,  25, 4.3,
+     "Covers 500 sq ft, removes 99.97% of particles ≥0.3 microns."),
+    ("Portable Bluetooth Speaker",           "Electronics",  59.99,  45, 4.5,
+     "IPX7 waterproof, 360-degree sound, 12-hour playback."),
+    ("Cast Iron Skillet 12in",               "Kitchen",      39.95,  70, 4.9,
+     "Pre-seasoned, works on all cooktops including induction."),
+    ("Standing Desk Converter",              "Furniture",   249.00,  18, 4.2,
+     "Sit-stand riser with gas-spring lift, smooth height adjustment."),
+    ("Running Shoes Pro",                    "Sports",      119.99,  55, 4.6,
+     "Breathable mesh upper, responsive foam midsole for long runs."),
+    ("Smart LED Desk Lamp",                  "Electronics",  49.99,  90, 4.5,
+     "Touch-control with 5 colour temps and USB-C charging port."),
+    ("French Press Coffee Maker",            "Kitchen",      34.99,  65, 4.7,
+     "8-cup borosilicate glass, stainless double-screen filter."),
+    ("Foam Roller Deep Tissue",              "Sports",       29.99, 100, 4.3,
+     "High-density EVA foam, 36-inch length for full-back coverage."),
+    ("Weighted Blanket 15lb",                "Home",         79.00,  40, 4.6,
+     "Glass-bead fill in 48x72in premium cotton shell."),
+    ("White Noise Sleep Machine",            "Home",         44.95,  55, 4.8,
+     "30 soothing sounds, auto-off timer, compact bedside design."),
+    ("4K Webcam Pro",                        "Electronics",  99.99,  30, 4.4,
+     "4K autofocus, built-in ring light and noise-cancelling mic."),
+    ("Bamboo Cutting Board Set",             "Kitchen",      32.00,  85, 4.6,
+     "3-piece set with juice grooves, naturally antimicrobial."),
+    ("Resistance Bands Set",                 "Sports",       19.99, 150, 4.5,
+     "5 resistance levels, latex-free, includes carry bag."),
+    ("Electric Kettle 1.7L",                 "Kitchen",      44.99,  60, 4.7,
+     "1500W rapid boil, 6 temperature presets, keep-warm mode."),
+    ("Monitor Light Bar",                    "Electronics",  35.99,  75, 4.5,
+     "Auto-dimming sensor, no screen glare, USB-C powered."),
+]
+
 
 CREATE_TABLE_SQL = f"""
 CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
@@ -45,135 +97,146 @@ CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
     price       NUMERIC(10,2)  NOT NULL,
     stock       INTEGER        NOT NULL DEFAULT 0,
     rating      NUMERIC(3,1),
-    description TEXT
+    description TEXT,
+    created_at  TIMESTAMPTZ    DEFAULT NOW()
 );
 """
 
-SEED_DATA = [
-    ("Wireless Noise-Cancelling Headphones", "Electronics", 149.99, 35, 4.7,
-     "Over-ear headphones with active noise cancellation and 30-hour battery life."),
-    ("Ergonomic Office Chair",               "Furniture",   329.00, 12, 4.5,
-     "Lumbar-support mesh chair adjustable for all-day comfort."),
-    ("Stainless Steel Water Bottle",         "Kitchen",      24.95, 120, 4.8,
-     "Double-walled 32 oz bottle keeps drinks cold 24 h or hot 12 h."),
-    ("Mechanical Keyboard",                  "Electronics",  89.99,  60, 4.6,
-     "Compact TKL layout with Cherry MX Brown switches and RGB backlight."),
-    ("Yoga Mat Premium",                     "Sports",       45.00,  80, 4.4,
-     "6mm thick non-slip mat with alignment lines; eco-friendly TPE foam."),
-    ("Air Purifier HEPA",                    "Home",        199.00,  25, 4.3,
-     "Covers up to 500 sq ft; removes 99.97% of particles >= 0.3 microns."),
-    ("Portable Bluetooth Speaker",           "Electronics",  59.99,  45, 4.5,
-     "IPX7 waterproof, 360 sound, 12-hour playback."),
-    ('Cast Iron Skillet 12"',                "Kitchen",      39.95,  70, 4.9,
-     "Pre-seasoned; compatible with all cooktops including induction."),
-    ("Standing Desk Converter",              "Furniture",   249.00,  18, 4.2,
-     "Sit-stand desktop riser with smooth gas-spring lift mechanism."),
-    ("Running Shoes Pro",                    "Sports",      119.99,  55, 4.6,
-     "Lightweight breathable mesh upper with responsive foam midsole."),
-    ("Smart LED Desk Lamp",                  "Electronics",  49.99,  90, 4.5,
-     "Touch-control, 5 colour temperatures, USB-C charging port built in."),
-    ("French Press Coffee Maker",            "Kitchen",      34.99,  65, 4.7,
-     "8-cup borosilicate glass carafe with stainless double-screen filter."),
-    ("Foam Roller Deep Tissue",              "Sports",       29.99, 100, 4.3,
-     "High-density EVA foam; 36-inch length for full-back coverage."),
-    ("Weighted Blanket 15lb",                "Home",         79.00,  40, 4.6,
-     "Glass-bead fill evenly distributed across 48x72 premium cotton shell."),
-    ("Noise Machine Sleep",                  "Home",         44.95,  55, 4.8,
-     "30 soothing sounds, timer settings, compact bedside design."),
-    ("4K Webcam Pro",                        "Electronics",  99.99,  30, 4.4,
-     "1080p/4K autofocus webcam with built-in ring light and noise-cancelling mic."),
-    ("Bamboo Cutting Board Set",             "Kitchen",      32.00,  85, 4.6,
-     "3-piece set with juice groove; naturally antimicrobial bamboo."),
-    ("Resistance Bands Set",                 "Sports",       19.99, 150, 4.5,
-     "5 resistance levels, latex-free, includes carry bag."),
-    ("Electric Kettle 1.7L",                 "Kitchen",      44.99,  60, 4.7,
-     "1500W rapid boil, 6 temperature presets, keep-warm function."),
-    ("Monitor Light Bar",                    "Electronics",  35.99,  75, 4.5,
-     "Clip-on LED bar with auto-dimming sensor and USB-C power."),
-]
+CREATE_INDEXES_SQL = f"""
+CREATE INDEX IF NOT EXISTS idx_{TABLE_NAME}_category ON {TABLE_NAME}(category);
+CREATE INDEX IF NOT EXISTS idx_{TABLE_NAME}_price    ON {TABLE_NAME}(price);
+CREATE INDEX IF NOT EXISTS idx_{TABLE_NAME}_rating   ON {TABLE_NAME}(rating);
+"""
 
 
-def init_db():
-    """Create table and seed data if empty. Called once on app startup."""
-    conn = get_conn()
+def init_db() -> bool:
+    """
+    Create table + indexes and seed data if table is empty.
+    Returns True on success, False on failure.
+    """
+    conn = None
     try:
+        conn = get_conn()
         with conn.cursor() as cur:
-            # pgvector is available on AlloyDB; ignore if not present locally
+            # Try enabling pgvector (available on AlloyDB)
             try:
                 cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
                 conn.commit()
             except Exception:
                 conn.rollback()
+                log.info("pgvector not available (OK for local dev)")
 
             cur.execute(CREATE_TABLE_SQL)
+            for stmt in CREATE_INDEXES_SQL.strip().split("\n"):
+                if stmt.strip():
+                    cur.execute(stmt)
+
             cur.execute(f"SELECT COUNT(*) FROM {TABLE_NAME};")
-            if cur.fetchone()[0] == 0:
+            count = cur.fetchone()[0]
+            if count == 0:
                 cur.executemany(
-                    f"INSERT INTO {TABLE_NAME} "
-                    "(name, category, price, stock, rating, description) "
-                    "VALUES (%s,%s,%s,%s,%s,%s)",
-                    SEED_DATA,
+                    f"""INSERT INTO {TABLE_NAME}
+                        (name, category, price, stock, rating, description)
+                        VALUES (%s,%s,%s,%s,%s,%s)""",
+                    SEED_PRODUCTS,
                 )
+                log.info(f"Seeded {len(SEED_PRODUCTS)} products into {TABLE_NAME}")
+            else:
+                log.info(f"Table {TABLE_NAME} already has {count} rows")
+
         conn.commit()
+        return True
     except Exception as exc:
-        conn.rollback()
-        raise exc
+        if conn:
+            conn.rollback()
+        log.error(f"init_db failed: {exc}")
+        return False
     finally:
-        release_conn(conn)
+        if conn:
+            put_conn(conn)
 
 
-# ── Query execution ───────────────────────────────────────────────────────
+# ── Query execution ────────────────────────────────────────────────────────
 
-def execute_query(sql: str) -> dict:
+def _serialize(val):
+    """Make a value JSON-safe."""
+    if isinstance(val, Decimal):
+        return float(val)
+    if hasattr(val, 'isoformat'):
+        return val.isoformat()
+    return val
+
+
+def execute_query(sql: str, params=None) -> dict:
     """
-    Run a SQL SELECT and return:
+    Execute a SQL SELECT and return:
       { columns, rows, count, error }
-    All values are JSON-serialisable (Decimal → float).
+    All values are JSON-serialisable.
     """
-    conn = get_conn()
+    conn = None
     try:
+        conn = get_conn()
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(sql)
-            raw_rows = cur.fetchall()
-            rows = []
-            for r in raw_rows:
-                row = {}
-                for k, v in r.items():
-                    # Convert Decimal to float for JSON
-                    try:
-                        from decimal import Decimal
-                        row[k] = float(v) if isinstance(v, Decimal) else v
-                    except Exception:
-                        row[k] = str(v)
-                rows.append(row)
-            columns = list(rows[0].keys()) if rows else []
-            return {"columns": columns, "rows": rows, "count": len(rows), "error": None}
+            cur.execute(sql, params)
+            raw = cur.fetchall()
+            rows = [{k: _serialize(v) for k, v in row.items()} for row in raw]
+            return {
+                "columns": list(rows[0].keys()) if rows else [],
+                "rows":    rows,
+                "count":   len(rows),
+                "error":   None,
+            }
     except Exception as exc:
-        conn.rollback()
+        if conn:
+            conn.rollback()
+        log.error(f"execute_query error: {exc}\nSQL: {sql}")
         return {"columns": [], "rows": [], "count": 0, "error": str(exc)}
     finally:
-        release_conn(conn)
+        if conn:
+            put_conn(conn)
 
 
-def get_schema() -> str:
-    """Return human-readable schema for display and AI prompts."""
-    return (
-        f"Table: {TABLE_NAME}\n"
-        "Columns:\n"
-        "  id          INTEGER  – primary key, auto-increment\n"
-        "  name        TEXT     – product name\n"
-        "  category    TEXT     – one of: Electronics, Kitchen, Sports, Furniture, Home\n"
-        "  price       NUMERIC  – price in USD (e.g. 49.99)\n"
-        "  stock       INTEGER  – units currently in stock\n"
-        "  rating      NUMERIC  – customer rating 0.0 to 5.0\n"
-        "  description TEXT     – short product description\n"
-        "\n"
-        "Sample categories: Electronics, Kitchen, Sports, Furniture, Home\n"
-        "Total rows: ~20 sample products\n"
+def get_table_stats() -> dict:
+    """Return summary stats for the dashboard."""
+    result = execute_query(f"""
+        SELECT
+            COUNT(*)                          AS total_products,
+            COUNT(DISTINCT category)          AS total_categories,
+            ROUND(AVG(price)::numeric, 2)     AS avg_price,
+            MIN(price)                        AS min_price,
+            MAX(price)                        AS max_price,
+            ROUND(AVG(rating)::numeric, 2)    AS avg_rating,
+            MAX(rating)                       AS max_rating,
+            SUM(stock)                        AS total_stock
+        FROM {TABLE_NAME};
+    """)
+    return result["rows"][0] if result["rows"] else {}
+
+
+def get_all_rows() -> dict:
+    return execute_query(
+        f"SELECT id, name, category, price, stock, rating, description "
+        f"FROM {TABLE_NAME} ORDER BY id;"
     )
 
 
-def get_all_rows() -> list:
-    """Return all rows for demo / fallback display."""
-    result = execute_query(f"SELECT * FROM {TABLE_NAME} ORDER BY id LIMIT 20;")
-    return result.get("rows", [])
+def get_schema_text() -> str:
+    return f"""Table name: {TABLE_NAME}
+
+Columns:
+  id          INTEGER        – auto-increment primary key
+  name        TEXT           – product name (e.g. "Wireless Headphones")
+  category    TEXT           – one of: Electronics, Kitchen, Sports, Furniture, Home
+  price       NUMERIC(10,2)  – price in USD (e.g. 49.99)
+  stock       INTEGER        – units currently in stock
+  rating      NUMERIC(3,1)   – customer rating from 0.0 to 5.0
+  description TEXT           – short product description
+  created_at  TIMESTAMPTZ    – row creation timestamp
+
+Sample values:
+  categories : Electronics, Kitchen, Sports, Furniture, Home
+  price range: $19.99 – $329.00
+  stock range: 12 – 150 units
+  rating range: 4.2 – 4.9
+
+Total rows: ~20 products"""

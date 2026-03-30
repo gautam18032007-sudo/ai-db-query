@@ -31,6 +31,7 @@ def ensure_db():
         try:
             init_db()
             _db_ready = True
+            app.logger.info("Database initialized successfully")
         except Exception as exc:
             app.logger.warning(f"DB init failed (demo mode active): {exc}")
             _db_ready = True  # prevent retry storm
